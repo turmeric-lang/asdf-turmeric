@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+cat <<'EOF'
+Turmeric is a statically-typed Lisp that compiles to C.
+This plugin installs Turmeric compiler versions from GitHub releases
+(https://github.com/rjungemann/turmeric/releases) and falls back to a
+source build when no prebuilt asset exists for the host.
+EOF

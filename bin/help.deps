@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+cat <<'EOF'
+Prebuilt install: curl, tar, sha256sum/shasum (standard on Linux & macOS).
+Source-build fallback (used when no prebuilt asset exists for your host):
+  - cmake >= 3.5
+  - a C compiler (gcc or clang)
+  - libedit (for the REPL)
+EOF

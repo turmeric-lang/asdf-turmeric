@@ -1,0 +1,108 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+: "${ASDF_INSTALL_TYPE:?asdf-turmeric: ASDF_INSTALL_TYPE not set}"
+: "${ASDF_INSTALL_VERSION:?asdf-turmeric: ASDF_INSTALL_VERSION not set}"
+: "${ASDF_INSTALL_PATH:?asdf-turmeric: ASDF_INSTALL_PATH not set}"
+
+if [ "$ASDF_INSTALL_TYPE" != "version" ]; then
+  echo "asdf-turmeric: only 'version' installs are supported (got '$ASDF_INSTALL_TYPE')" >&2
+  exit 1
+fi
+
+plugin_dir="$(cd "$(dirname "$0")/.." && pwd)"
+# shellcheck source=../lib/utils.bash
+. "$plugin_dir/lib/utils.bash"
+
+v="$ASDF_INSTALL_VERSION"
+target="$(turmeric_target)"
+asset="$(turmeric_asset_name "$v" "$target")"
+url="$(turmeric_release_url "$v" "$target")"
+
+tmp="$(mktemp -d)"
+trap 'rm -rf "$tmp"' EXIT
+
+tarball="$tmp/$asset"
+extracted="$tmp/extracted"
+mkdir -p "$extracted"
+
+# Allow tests to force the source-build fallback.
+force_source="${ASDF_TURMERIC_FORCE_SOURCE:-0}"
+
+if [ "$force_source" != "1" ] && turmeric_download "$url" "$tarball" 2>/dev/null; then
+  echo "asdf-turmeric: downloaded $asset" >&2
+
+  # Verify against the combined sha256sums.txt when present.
+  sums="$tmp/sha256sums.txt"
+  if turmeric_download "$(turmeric_sums_url "$v")" "$sums" 2>/dev/null; then
+    if turmeric_verify_from_sums "$tarball" "$asset" < "$sums"; then
+      echo "asdf-turmeric: sha256 verified" >&2
+    else
+      rc=$?
+      if [ "$rc" = 2 ]; then
+        echo "asdf-turmeric: asset not listed in sha256sums.txt; skipping verification" >&2
+      else
+        exit 1
+      fi
+    fi
+  else
+    echo "asdf-turmeric: no sha256sums.txt for v${v}; skipping verification" >&2
+  fi
+
+  tar -xzf "$tarball" -C "$extracted"
+else
+  echo "asdf-turmeric: no prebuilt asset for ${target} at v${v}; building from source" >&2
+  src_url="https://github.com/${TURMERIC_REPO}/archive/refs/tags/v${v}.tar.gz"
+  turmeric_download "$src_url" "$tarball"
+
+  src="$tmp/src"
+  mkdir -p "$src"
+  tar -xzf "$tarball" -C "$src" --strip-components=1
+  (
+    cd "$src"
+    cmake -S . -B build -DCMAKE_BUILD_TYPE=Release \
+      -DCMAKE_POLICY_VERSION_MINIMUM=3.5 >/dev/null
+    cmake --build build -j >/dev/null
+    mkdir -p "$extracted"
+    cp build/tur "$extracted/tur"
+    [ -d stdlib ] && cp -R stdlib "$extracted/"
+    [ -f build/src/libturi.a ] && cp build/src/libturi.a "$extracted/"
+    if [ -d src/turi ]; then
+      mkdir -p "$extracted/include/turi"
+      # shellcheck disable=SC2086
+      for h in src/turi/eval.h src/turi/env.h src/turi/value.h src/turi/fiber.h; do
+        [ -f "$h" ] && cp "$h" "$extracted/include/turi/"
+      done
+    fi
+  )
+fi
+
+# Normalize layout: place the binary at <install>/bin/tur regardless of
+# whether the tarball stored it at the root (current shape) or under bin/.
+mkdir -p "$ASDF_INSTALL_PATH/bin"
+if [ -x "$extracted/bin/tur" ]; then
+  cp -R "$extracted/." "$ASDF_INSTALL_PATH/"
+elif [ -x "$extracted/tur" ]; then
+  mv "$extracted/tur" "$ASDF_INSTALL_PATH/bin/tur"
+  # Copy any remaining payload (stdlib/, include/, libturi.a, ...).
+  shopt -s dotglob nullglob
+  for entry in "$extracted"/*; do
+    name="$(basename "$entry")"
+    [ "$name" = bin ] && continue
+    cp -R "$entry" "$ASDF_INSTALL_PATH/"
+  done
+  shopt -u dotglob nullglob
+else
+  echo "asdf-turmeric: extracted artifact did not contain a tur binary" >&2
+  exit 1
+fi
+
+chmod +x "$ASDF_INSTALL_PATH/bin/tur"
+
+# Sanity check.
+if ! "$ASDF_INSTALL_PATH/bin/tur" --version >/dev/null; then
+  echo "asdf-turmeric: post-install --version check failed" >&2
+  exit 1
+fi
+
+echo "asdf-turmeric: installed turmeric v${v} into ${ASDF_INSTALL_PATH}" >&2

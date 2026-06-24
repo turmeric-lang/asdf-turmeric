@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+plugin_dir="$(cd "$(dirname "$0")/.." && pwd)"
+# shellcheck source=../lib/utils.bash
+. "$plugin_dir/lib/utils.bash"
+
+# Page through GitHub releases; print bare versions, oldest first.
+# No jq dependency -- a grep|sed pass over tag_name lines is enough.
+page=1
+versions=""
+while :; do
+  body="$(turmeric_curl "${TURMERIC_API_URL}/releases?per_page=100&page=${page}")"
+  chunk="$(printf '%s\n' "$body" \
+    | grep -E '"tag_name":' \
+    | sed -E 's/.*"v?([0-9]+\.[0-9]+\.[0-9]+(-[A-Za-z0-9.+-]+)?)".*/\1/' \
+    | awk 'NF')"
+  [ -n "$chunk" ] || break
+  versions="${versions}${chunk}
+"
+  # Stop once we see a short page.
+  count="$(printf '%s\n' "$chunk" | wc -l | awk '{print $1}')"
+  [ "$count" -lt 100 ] && break
+  page=$((page + 1))
+  [ "$page" -gt 20 ] && break  # hard cap; 20*100 = 2000 versions
+done
+
+printf '%s' "$versions" | sort -V | awk 'NF' | xargs

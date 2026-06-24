@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+# Point tur at its bundled stdlib so resource lookup is unambiguous, even
+# when the user has no TUR_STDLIB_DIR set.
+if [ -d "$ASDF_INSTALL_PATH/stdlib" ]; then
+  export TUR_STDLIB_DIR="$ASDF_INSTALL_PATH/stdlib"
+fi

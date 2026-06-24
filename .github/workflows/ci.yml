@@ -1,0 +1,99 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Turmeric version to install (bare, e.g. 0.23.1). Empty = latest."
+        required: false
+        default: ""
+
+env:
+  # Pin a known-good tag so CI is hermetic. Override via workflow_dispatch.
+  TURMERIC_TEST_VERSION: ${{ github.event.inputs.version }}
+
+jobs:
+  prebuilt:
+    name: prebuilt (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install mise
+        uses: jdx/mise-action@v2
+
+      - name: Install plugin from checkout
+        run: mise plugin install turmeric "$(pwd)"
+
+      - name: Resolve version
+        id: ver
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          v="${TURMERIC_TEST_VERSION}"
+          if [ -z "$v" ]; then
+            v="$(./bin/latest-stable)"
+          fi
+          echo "v=$v" >> "$GITHUB_OUTPUT"
+          echo "Will install turmeric@$v"
+
+      - name: Install Turmeric (prebuilt)
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: mise install "turmeric@${{ steps.ver.outputs.v }}"
+
+      - name: Smoke test
+        run: mise exec "turmeric@${{ steps.ver.outputs.v }}" -- tur --version
+
+  source-fallback:
+    name: source fallback (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    env:
+      ASDF_TURMERIC_FORCE_SOURCE: "1"
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install build deps (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y cmake libedit-dev
+
+      - name: Install build deps (macOS)
+        if: runner.os == 'macOS'
+        run: brew install cmake libedit || true
+
+      - name: Install mise
+        uses: jdx/mise-action@v2
+
+      - name: Install plugin from checkout
+        run: mise plugin install turmeric "$(pwd)"
+
+      - name: Resolve version
+        id: ver
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          v="${TURMERIC_TEST_VERSION}"
+          if [ -z "$v" ]; then
+            v="$(./bin/latest-stable)"
+          fi
+          echo "v=$v" >> "$GITHUB_OUTPUT"
+          echo "Will install turmeric@$v (forced source build)"
+
+      - name: Install Turmeric (source build)
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: mise install "turmeric@${{ steps.ver.outputs.v }}"
+
+      - name: Smoke test
+        run: mise exec "turmeric@${{ steps.ver.outputs.v }}" -- tur --version
