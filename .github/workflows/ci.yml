@@ -30,7 +30,7 @@ jobs:
         uses: jdx/mise-action@v2
 
       - name: Install plugin from checkout
-        run: mise plugin install turmeric "$(pwd)"
+        run: mise plugin link turmeric "$(pwd)"
 
       - name: Resolve version
         id: ver
@@ -76,7 +76,7 @@ jobs:
         uses: jdx/mise-action@v2
 
       - name: Install plugin from checkout
-        run: mise plugin install turmeric "$(pwd)"
+        run: mise plugin link turmeric "$(pwd)"
 
       - name: Resolve version
         id: ver

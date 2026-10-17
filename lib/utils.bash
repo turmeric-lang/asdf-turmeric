@@ -1,7 +1,7 @@
 # Shared helpers for the asdf-turmeric plugin.
 #
 # The plugin downloads release artifacts from
-# https://github.com/rjungemann/turmeric and consumes the existing
+# https://github.com/turmeric-lang/turmeric and consumes the existing
 # release contract:
 #
 #   - asset name:       turmeric-vX.Y.Z-<os>-<arch>.tar.gz
@@ -10,7 +10,7 @@
 #
 # `tvm` consumes the same artifacts; see tvm/tvm.sh in the turmeric repo.
 
-TURMERIC_REPO="${TURMERIC_REPO:-rjungemann/turmeric}"
+TURMERIC_REPO="${TURMERIC_REPO:-turmeric-lang/turmeric}"
 TURMERIC_API_URL="${TURMERIC_API_URL:-https://api.github.com/repos/${TURMERIC_REPO}}"
 TURMERIC_RELEASE_BASE="${TURMERIC_RELEASE_BASE:-https://github.com/${TURMERIC_REPO}/releases/download}"
 
