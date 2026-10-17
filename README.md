@@ -1,11 +1,11 @@
 # asdf-turmeric
 
-[Turmeric](https://github.com/rjungemann/turmeric) compiler plugin for
+[Turmeric](https://github.com/turmeric-lang/turmeric) compiler plugin for
 [`mise`](https://mise.jdx.dev) and [`asdf`](https://asdf-vm.com).
 
 Installs Turmeric compiler versions from the official GitHub releases and
 falls back to a source build when no prebuilt asset exists for the host.
-You do **not** need [`tvm`](https://github.com/rjungemann/turmeric/tree/main/tvm)
+You do **not** need [`tvm`](https://github.com/turmeric-lang/turmeric/tree/main/tvm)
 to use this plugin -- the install path is fully self-contained.
 
 ## Supported hosts
@@ -36,7 +36,7 @@ exec $SHELL
 ### Add the plugin
 
 ```sh
-mise plugin install turmeric https://github.com/rjungemann/asdf-turmeric.git
+mise plugin install turmeric https://github.com/turmeric-lang/asdf-turmeric.git
 ```
 
 ### Install a Turmeric version
@@ -82,7 +82,7 @@ exec $SHELL
 ### Add the plugin
 
 ```sh
-asdf plugin add turmeric https://github.com/rjungemann/asdf-turmeric.git
+asdf plugin add turmeric https://github.com/turmeric-lang/asdf-turmeric.git
 ```
 
 ### Install a Turmeric version
@@ -114,7 +114,7 @@ After that, `tur` on `PATH` resolves to the pinned version.
 | Variable | Purpose |
 | --- | --- |
 | `GITHUB_TOKEN` | Optional. Lifts the 60-req/hr unauthenticated GitHub API rate limit when calling `list-all` from CI. |
-| `TURMERIC_REPO` | Override the upstream repo slug (default `rjungemann/turmeric`). Useful for forks. |
+| `TURMERIC_REPO` | Override the upstream repo slug (default `turmeric-lang/turmeric`). Useful for forks. |
 | `ASDF_TURMERIC_FORCE_SOURCE` | Set to `1` to force the source-build path even when a prebuilt asset is available. Used by the plugin's CI to exercise the fallback. |
 
 ## How the plugin works
